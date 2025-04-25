@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Doctor Finder</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        .search-container {
+            margin-bottom: 20px;
+            position: relative;
+        }
+        #search-input {
+            width: 100%;
+            padding: 12px 15px;
+            font-size: 14px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        #suggestions {
+            position: absolute;
+            width: 100%;
+            background: white;
+            border: 1px solid #ddd;
+            border-top: none;
+            z-index: 100;
+            display: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .suggestion-item {
+            padding: 10px 15px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .suggestion-item:hover {
+            background: #f0f0f0;
+        }
+        .container {
+            display: flex;
+            gap: 20px;
+        }
+        .filters {
+            width: 250px;
+            background: white;
+            padding: 15px;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .doctor-list {
+            flex: 1;
+        }
+        .filter-section {
+            margin-bottom: 25px;
+        }
+        .filter-header {
+            font-weight: 600;
+            margin-bottom: 12px;
+            font-size: 15px;
+            color: #444;
+        }
+        .filter-option {
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+        }
+        .filter-option input {
+            margin-right: 8px;
+        }
+        .filter-option label {
+            font-size: 14px;
+            color: #555;
+        }
+        .doctor-card {
+            background: white;
+            border: 1px solid #e0e0e0;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            display: flex;
+            gap: 15px;
+        }
+        .doctor-photo {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            object-fit: cover;
+            background-color: #eee;
+        }
+        .doctor-info {
+            flex: 1;
+        }
+        .doctor-name {
+            font-weight: 600;
+            font-size: 16px;
+            margin-bottom: 5px;
+            color: #222;
+        }
+        .doctor-specialty {
+            font-size: 14px;
+            color: #555;
+            margin-bottom: 5px;
+        }
+        .doctor-experience {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        .doctor-fee {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        .doctor-clinic {
+            font-size: 13px;
+            color: #888;
+            font-style: italic;
+        }
+        h1 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        .no-doctors {
+            padding: 20px;
+            text-align: center;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <h1>Search Symptoms, Doctors, Specialists, Clinics</h1>
+    
+    <div class="search-container">
+        <input 
+            type="text" 
+            id="search-input" 
+            placeholder="Search Symptoms, Doctors, Specialists, Clinics" 
+            data-testid="autocomplete-input"
+        >
+    </div>
+    
+    <div class="container">
+        <div class="filters">
+            <div class="filter-section">
+                <div class="filter-header" data-testid="filter-header-sort">Sort by</div>
+                <div class="filter-option">
+                    <input type="radio" id="sort-fees" name="sort-by" value="fees" data-testid="sort-fees">
+                    <label for="sort-fees">Fees Low-High</label>
+                </div>
+                <div class="filter-option">
+                    <input type="radio" id="sort-experience" name="sort-by" value="experience" data-testid="sort-experience">
+                    <label for="sort-experience">Experience - Most Experienced</label>
+                </div>
+            </div>
+            
+            <div class="filter-section">
+                <div class="filter-header" data-testid="filter-header-speciality">Specialities</div>
+                <div id="speciality-filters"></div>
+            </div>
+            
+            <div class="filter-section">
+                <div class="filter-header" data-testid="filter-header-moc">Mode of consultation</div>
+                <div class="filter-option">
+                    <input type="radio" id="video-consult" name="consultation-type" value="Video Consultation" data-testid="filter-video-consult">
+                    <label for="video-consult">Video Consultation</label>
+                </div>
+                <div class="filter-option">
+                    <input type="radio" id="in-clinic" name="consultation-type" value="In-class Consultation" data-testid="filter-in-clinic">
+                    <label for="in-clinic">In-class Consultation</label>
+                </div>
+                <div class="filter-option">
+                    <input type="radio" id="all-consult" name="consultation-type" value="All" checked>
+                    <label for="all-consult">All</label>
+                </div>
+            </div>
+        </div>
+        
+        <div class="doctor-list" id="doctor-list">
+            <div class="no-doctors">Loading doctors...</div>
+        </div>
+    </div>
+
+    <script>
+        let doctors = [];
+        let filteredDoctors = [];
+
+        const searchInput = document.querySelector('[data-testid="autocomplete-input"]');
+        const suggestionBox = document.createElement('ul');
+        suggestionBox.id = 'suggestions';
+        searchInput.parentNode.appendChild(suggestionBox);
+        const doctorListEl = document.getElementById('doctor-list');
+        const specialityFiltersContainer = document.getElementById('speciality-filters');
+
+        // Fetch data
+        fetch('https://srijandubey.github.io/campus-api-mock/SRM-C1-25.json')
+        .then(res => res.json())
+        .then(data => {
+            doctors = data;
+            initializeSpecialityFilters();
+            initFromQuery();
+        })
+        .catch(error => {
+            console.error('Error fetching data:', error);
+            doctorListEl.innerHTML = '<div class="no-doctors">Error loading doctors. Please try again later.</div>';
+        });
+
+        // Initialize speciality filters
+        function initializeSpecialityFilters() {
+            // Get all unique specialities
+            const specialities = new Set();
+            doctors.forEach(doctor => {
+                if (doctor.speciality) {
+                    doctor.speciality.split(',').forEach(spec => {
+                        specialities.add(spec.trim());
+                    });
+                }
+            });
+            
+            // Create checkboxes for each speciality
+            Array.from(specialities).sort().forEach(speciality => {
+                const checkboxId = `filter-specialty-${speciality.replace(/\s+/g, '-').replace(/\//g, '-')}`;
+                const div = document.createElement('div');
+                div.className = 'filter-option';
+                div.innerHTML = `
+                    <input type="checkbox" id="${checkboxId}" value="${speciality}" data-testid="${checkboxId}">
+                    <label for="${checkboxId}">${speciality}</label>
+                `;
+                specialityFiltersContainer.appendChild(div);
+            });
+        }
+
+        // Handle Autocomplete
+        searchInput.addEventListener('input', () => {
+            const val = searchInput.value.toLowerCase();
+            suggestionBox.innerHTML = '';
+            suggestionBox.style.display = 'none';
+            
+            if (!val) return;
+
+            const matches = doctors.filter(d => d.name.toLowerCase().includes(val)).slice(0, 3);
+            
+            if (matches.length > 0) {
+                matches.forEach(doc => {
+                    const li = document.createElement('li');
+                    li.textContent = doc.name;
+                    li.className = 'suggestion-item';
+                    li.setAttribute('data-testid', 'suggestion-item');
+                    li.addEventListener('click', () => {
+                        searchInput.value = doc.name;
+                        suggestionBox.style.display = 'none';
+                        updateQuery({ search: doc.name });
+                    });
+                    suggestionBox.appendChild(li);
+                });
+                suggestionBox.style.display = 'block';
+            }
+        });
+
+        // Close suggestions when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!searchInput.contains(e.target) && !suggestionBox.contains(e.target)) {
+                suggestionBox.style.display = 'none';
+            }
+        });
+
+        // Filters & Sorting
+        document.querySelectorAll('input').forEach(input => {
+            input.addEventListener('change', () => {
+                const search = searchInput.value;
+                const consultation = document.querySelector('input[name="consultation-type"]:checked')?.value;
+                const sort = document.querySelector('input[name="sort-by"]:checked')?.value;
+                const specialties = [...document.querySelectorAll('#speciality-filters input[type="checkbox"]:checked')].map(i => i.value);
+                updateQuery({ search, consultation, sort, specialties: specialties.join(',') });
+            });
+        });
+
+        // Update URL query
+        function updateQuery(params) {
+            const url = new URL(window.location);
+            Object.entries(params).forEach(([k, v]) => {
+                if (v) url.searchParams.set(k, v);
+                else url.searchParams.delete(k);
+            });
+            history.pushState({}, '', url);
+            applyFiltersFromQuery();
+        }
+
+        function initFromQuery() {
+            const params = new URLSearchParams(location.search);
+            const search = params.get('search') || '';
+            const consultation = params.get('consultation') || '';
+            const sort = params.get('sort') || '';
+            const specialties = (params.get('specialties') || '').split(',');
+
+            searchInput.value = search;
+
+            if (consultation && consultation !== 'All') {
+                document.querySelector(`input[value="${consultation}"]`)?.click();
+            }
+
+            if (sort) {
+                document.querySelector(`input[value="${sort}"]`)?.click();
+            }
+
+            specialties.forEach(spec => {
+                if (spec) {
+                    const checkbox = document.querySelector(`input[value="${spec}"]`);
+                    if (checkbox) checkbox.checked = true;
+                }
+            });
+
+            applyFiltersFromQuery();
+        }
+
+        function applyFiltersFromQuery() {
+            const params = new URLSearchParams(location.search);
+            const search = params.get('search')?.toLowerCase() || '';
+            const consultation = params.get('consultation');
+            const sort = params.get('sort');
+            const specialties = (params.get('specialties') || '').split(',').filter(Boolean);
+
+            filteredDoctors = doctors.filter(doc => {
+                let match = true;
+                if (search) match = doc.name.toLowerCase().includes(search);
+                if (consultation && consultation !== 'All') {
+                    if (consultation === 'Video Consultation') match = match && doc.video_consult;
+                    if (consultation === 'In-class Consultation') match = match && doc.in_clinic;
+                }
+                if (specialties.length) {
+                    const docSpecialities = doc.speciality ? doc.speciality.split(',').map(s => s.trim()) : [];
+                    match = match && specialties.some(s => docSpecialities.includes(s));
+                }
+                return match;
+            });
+
+            if (sort === 'fees') {
+                filteredDoctors.sort((a, b) => (a.fees || 0) - (b.fees || 0));
+            } else if (sort === 'experience') {
+                filteredDoctors.sort((a, b) => (b.experience || 0) - (a.experience || 0));
+            }
+
+            renderDoctors();
+        }
+
+        function renderDoctors() {
+            doctorListEl.innerHTML = '';
+            
+            if (filteredDoctors.length === 0) {
+                doctorListEl.innerHTML = '<div class="no-doctors" data-testid="no-doctors-message">No doctors found matching your criteria.</div>';
+                return;
+            }
+
+            filteredDoctors.forEach(doc => {
+                const card = document.createElement('div');
+                card.className = 'doctor-card';
+                card.setAttribute('data-testid', 'doctor-card');
+
+                // Create photo element
+                const photoDiv = document.createElement('div');
+                const photoImg = document.createElement('img');
+                photoImg.className = 'doctor-photo';
+                photoImg.src = doc.photo || 'https://via.placeholder.com/80';
+                photoImg.alt = doc.name;
+                photoDiv.appendChild(photoImg);
+
+                // Create info container
+                const infoDiv = document.createElement('div');
+                infoDiv.className = 'doctor-info';
+
+                // Add doctor details
+                const name = document.createElement('div');
+                name.className = 'doctor-name';
+                name.textContent = doc.name;
+                name.setAttribute('data-testid', 'doctor-name');
+
+                const specialty = document.createElement('div');
+                specialty.className = 'doctor-specialty';
+                specialty.textContent = doc.speciality || 'General Physician';
+                specialty.setAttribute('data-testid', 'doctor-specialty');
+
+                const experience = document.createElement('div');
+                experience.className = 'doctor-experience';
+                experience.textContent = `${doc.experience || 'N/A'} yrs exp.`;
+                experience.setAttribute('data-testid', 'doctor-experience');
+
+                const fee = document.createElement('div');
+                fee.className = 'doctor-fee';
+                fee.textContent = doc.fees ? `₹${doc.fees}` : 'Fees not specified';
+                fee.setAttribute('data-testid', 'doctor-fee');
+
+                // Add clinic if available
+                let clinic = null;
+                if (doc.clinic) {
+                    clinic = document.createElement('div');
+                    clinic.className = 'doctor-clinic';
+                    clinic.textContent = `© ${doc.clinic}`;
+                }
+
+                // Append all elements
+                infoDiv.appendChild(name);
+                infoDiv.appendChild(specialty);
+                infoDiv.appendChild(experience);
+                infoDiv.appendChild(fee);
+                if (clinic) infoDiv.appendChild(clinic);
+
+                card.appendChild(photoDiv);
+                card.appendChild(infoDiv);
+
+                doctorListEl.appendChild(card);
+            });
+        }
+
+        // Handle browser back/forward
+        window.addEventListener('popstate', initFromQuery);
+    </script>
+</body>
+</html>

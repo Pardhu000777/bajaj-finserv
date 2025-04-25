@@ -1,0 +1,70 @@
+CSS body { font-family: sans-serif; margin: 20px; }
+.container {
+display: flex;
+gap: 20px;
+}
+
+.header {
+margin-bottom: 20px;
+}
+
+#autocomplete-input {
+padding: 10px;
+width: 300px;
+}
+
+#suggestions {
+list-style: none;
+padding: 0;
+margin: 0;
+border: 1px solid #ccc;
+width: 300px;
+position: absolute;
+background-color: white;
+z-index: 10;
+}
+
+.suggestion-item {
+padding: 8px;
+cursor: pointer;
+}
+
+.suggestion-item:hover {
+background-color: #f0f0f0;
+}
+
+.filter-panel {
+width: 200px;
+padding: 15px;
+border: 1px solid #ccc;
+}
+
+.filter-group {
+margin-bottom: 15px;
+}
+
+.doctor-list {
+flex-grow: 1;
+display: grid;
+grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+gap: 20px;
+}
+
+.doctor-card {
+border: 1px solid #eee;
+padding: 15px;
+}
+
+.doctor-name {
+font-weight: bold;
+margin-bottom: 5px;
+}
+
+.doctor-specialty {
+color: #555;
+margin-bottom: 5px;
+}
+
+.doctor-experience, .doctor-fee {
+margin-bottom: 3px;
+}
